@@ -2,12 +2,13 @@
 #include <stdint.h>
 
 void showByte(int8_t n){
+	// Modified from https://stackoverflow.com/questions/1024389/print-an-int-in-binary-representation-using-c
 	int8_t m=n;
 	for(int i=0;i<8;i++){
 		if(m&1){
-			printf("1");
+			printf("@");
 		}else{
-			printf("0");
+			printf(" ");
 		}
 		m >>=1;
 	}
@@ -18,7 +19,6 @@ void showGrid(uint64_t  n){
 		for (int i=0;i<8;i++){
 			showByte(*(p+i));
 			printf("\n");
-			//printf("%x\n",*(p+i));
 		}
 }
 
@@ -67,6 +67,7 @@ uint64_t golStep(uint64_t c){
 	d1^=shifts[3];
 	d3=c1&d2;
 	d2^=c1;
+	// first few are done outside a loop because they are slightly simpler when you know they started as 0
 	for(int i=4;i<9;i++){
 		c1=d1&shifts[i];
 		d1^=shifts[i];
@@ -78,15 +79,15 @@ uint64_t golStep(uint64_t c){
 }
 
 uint64_t glider = 0x0000000020107000;
-uint64_t spiner = 0x0070000000;
+uint64_t spiner = 0x0000000070000000;
 
 int main(){
-		uint64_t i = glider;
-		showGrid(i);
-		for(int j=0;j<1000000000;j++){
-			i = golStep(i);
+		uint64_t grid [8][8];
+		for(int i=0;i<8;i++){
+			for(int j=0;j<8;j++){
+				grid[i][j]=0;
+			}
 		}
-		printf("--------\n");
-		showGrid(i);
+		grid[2][4]=glider;
 }
 
