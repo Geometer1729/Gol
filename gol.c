@@ -28,6 +28,7 @@ void showBigGrid(int x,int y,uint64_t grid[x][y]){
 			for(int i=x-1;i>=0;i--){
 				p= (uint8_t *)&grid[i][j];
 				showByte(*(p+row));
+				//these lines are usefull when debuging boundry errors
 				//printf("|");
 			}
 			printf("\n");
@@ -58,6 +59,7 @@ void showLong(uint64_t n){
 }
 
 inline uint64_t downRow(uint64_t i,uint64_t u){
+	//the first byte comes is the last byte of u the next 7 bytes are the first 7 of i
 	return (i >> 8) | (u << 56);
 }
 
@@ -66,6 +68,7 @@ inline uint64_t upRow(uint64_t i,uint64_t d){
 }
 
 inline uint64_t leftCol(uint64_t i,uint64_t r){
+	//the 7 left bits of each byte come from shifting i left 1 and the last bit from shifting r right 7
 	return ( (i << 1) & 0xfefefefefefefefe ) | ( ((r >> 7) & 0x0101010101010101));
 }
 
@@ -73,6 +76,7 @@ inline uint64_t rightCol(uint64_t i,uint64_t l){
 	return ( (i >> 1) & 0x7f7f7f7f7f7f7f7f ) | ( ((l << 7) & 0x8080808080808080));
 }
 
+//all these functions treat the grid as a torus and use the above 4 functions to shift it in one direction
 void gridDown(int x,int y,uint64_t grid[x][y],uint64_t newGrid[x][y]){
 	for(int i=0;i<x;i++){
 		for(int j=0;j<y;j++){
@@ -107,17 +111,21 @@ void gridRight(int x,int y,uint64_t grid[x][y],uint64_t newGrid[x][y]){
 
 void golStep(int x,int y,uint64_t old[x][y],uint64_t new[x][y]){
 	uint64_t shifts [9][x][y];
+	// I think there is a way to avoid coppying this but I'm not sure how
 	for(int i=0;i<x;i++){
 		for(int j=0;j<y;j++){
 			shifts[0][i][j]=old[i][j];
 		}
 	}
+	//left and right shifts are done first so they are done fewer times because I think they are a bit slower
 	gridLeft(x,y,shifts[0],shifts[1]);
 	gridRight(x,y,shifts[0],shifts[2]);
 	for(int i=0;i<3;i++){
 		gridUp  (x,y,shifts[i],shifts[i+3]); 
 		gridDown(x,y,shifts[i],shifts[i+6]); 
 	}
+	// d stores the bits of the count, c stores the carrys
+	// a 3 bit count is good enough as knowing rather a cell had 0 or 8 neighbors is never nesecary
 	uint64_t d[3][x][y];
 	uint64_t c[2][x][y];
 
@@ -149,6 +157,7 @@ void golStep(int x,int y,uint64_t old[x][y],uint64_t new[x][y]){
 	return;
 }
 
+// atleast untill I add a way to read files these are handy for coding tests
 uint64_t glider  = 0x0000000000020107;
 uint64_t glider2 = 0xc0a0800000000000;
 uint64_t spiner  = 0x0000000070000000;
@@ -167,10 +176,9 @@ int main(){
 			}
 		}
 		grid[0][1]=glider;
-
 		showBigGrid(x,y,grid);
 		lineBreak(x,'#');
-		for(int i=0;i<10000000;i++){
+		for(int i=0;i<100000000;i++){
 			golStep(x,y,grid,newGrid);
 			golStep(x,y,newGrid,grid);
 		}
