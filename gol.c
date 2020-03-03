@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <unistd.h>
 
 void showByte(int8_t n){
 	// Modified from https://stackoverflow.com/questions/1024389/print-an-int-in-binary-representation-using-c
@@ -14,7 +15,30 @@ void showByte(int8_t n){
 	}
 }
 
-void showGrid(uint64_t  n){
+void showBigGrid(int x,int y,uint64_t grid[x][y]){
+	uint8_t * p;
+	for(int j=0;j<y;j++){
+		for(int row=0;row<8;row++){
+			for(int i=x-1;i>=0;i--){
+				p= (uint8_t *)&grid[i][j];
+				showByte(*(p+row));
+				printf("|");
+			}
+			printf("\n");
+		}
+		for(int a=0;a<9*x-1;a++)
+			printf("-");
+		printf("\n");
+	}
+}
+
+void lineBreak(int x){
+		for(int a=0;a<9*x-1;a++)
+			printf("#");
+		printf("\n");
+}
+
+void showIntGrid(uint64_t  n){
     uint8_t * p = (uint8_t *)&n;
 		for (int i=0;i<8;i++){
 			showByte(*(p+i));
@@ -35,59 +59,129 @@ void showLong(uint64_t n){
 	printf("\n");
 }
 
-uint64_t downRow(uint64_t i){
-	return (i >> 8) | (i << 56);
+uint64_t downRow(uint64_t i,uint64_t u){
+	return (i >> 8) | (u << 56);
 }
 
-uint64_t upRow(uint64_t i){
-	return (i << 8) | (i >> 56);
+uint64_t upRow(uint64_t i,uint64_t d){
+	return (i << 8) | (d >> 56);
 }
 
-uint64_t leftCol(uint64_t i){
-	return ( (i << 1) & 0xfefefefefefefefe ) | ( ((i >> 7) & 0x0101010101010101));
+uint64_t leftCol(uint64_t i,uint64_t r){
+	return ( (i << 1) & 0xfefefefefefefefe ) | ( ((r >> 7) & 0x0101010101010101));
 }
 
-uint64_t rightCol(uint64_t i){
-	return ( (i >> 1) & 0x7f7f7f7f7f7f7f7f ) | ( ((i << 7) & 0x8080808080808080));
+uint64_t rightCol(uint64_t i,uint64_t l){
+	return ( (i >> 1) & 0x7f7f7f7f7f7f7f7f ) | ( ((l << 7) & 0x8080808080808080));
 }
 
-uint64_t golStep(uint64_t c){
-	uint64_t shifts [9];
-	shifts[0]=c;
-	shifts[1]=leftCol(c);
-	shifts[2]=rightCol(c);
+void gridDown(int x,int y,uint64_t grid[x][y],uint64_t newGrid[x][y]){
+	for(int i=0;i<x;i++){
+		for(int j=0;j<y;j++){
+			newGrid[i][j]=downRow(grid[i][j],grid[i][(j+1)%y]);
+		}
+	}
+}
+
+void gridUp(int x,int y,uint64_t grid[x][y],uint64_t newGrid[x][y]){
+	for(int i=0;i<x;i++){
+		for(int j=0;j<y;j++){
+			newGrid[i][j]=upRow(grid[i][j],grid[i][(y+j-1)%y]);
+		}
+	}
+}
+
+void gridLeft(int x,int y,uint64_t grid[x][y] ,uint64_t newGrid[x][y]){
+	for(int i=0;i<x;i++){
+		for(int j=0;j<y;j++){
+			newGrid[i][j]=leftCol(grid[i][j],grid[(i+1)%x][j]);
+		}
+	}
+}
+
+void gridRight(int x,int y,uint64_t grid[x][y],uint64_t newGrid[x][y]){
+	for(int i=0;i<x;i++){
+		for(int j=0;j<y;j++){
+			newGrid[i][j]=rightCol(grid[i][j],grid[(x+i-1)%x][j]);
+		}
+	}
+}
+
+void golStep(int x,int y,uint64_t old[x][y],uint64_t new[x][y]){
+	uint64_t shifts [9][x][y];
+	for(int i=0;i<x;i++){
+		for(int j=0;j<y;j++){
+			shifts[0][i][j]=old[i][j];
+		}
+	}
+	gridLeft(x,y,shifts[0],shifts[1]);
+	gridRight(x,y,shifts[0],shifts[2]);
 	for(int i=0;i<3;i++){
-		shifts[i+3]=downRow(shifts[i]);
-		shifts[i+6]=upRow(shifts[i]);
+		gridUp  (x,y,shifts[i],shifts[i+3]); 
+		gridDown(x,y,shifts[i],shifts[i+6]); 
 	}
-	uint64_t d1,d2,d3,c1,c2;
-	d1=shifts[1]^shifts[2];
-	d2=shifts[1]&shifts[2];
-	c1=d1&shifts[3];
-	d1^=shifts[3];
-	d3=c1&d2;
-	d2^=c1;
-	// first few are done outside a loop because they are slightly simpler when you know they started as 0
-	for(int i=4;i<9;i++){
-		c1=d1&shifts[i];
-		d1^=shifts[i];
-		c2=d2&c1;
-		d2^=c1;
-		d3^=c2;
+	//debug
+	//for(int a=0;a<9;a++){
+	//	printf("%d\n",a);
+	//	showIntGrid(shifts[a][0][0]);
+	//	lineBreak(1);
+	//}
+	//debug
+	uint64_t d[3][x][y];
+	uint64_t c[2][x][y];
+
+	for(int i=0;i<x;i++){
+		for(int j=0;j<y;j++){
+			// first few are done outside a loop because they are slightly simpler when you know they started as 0
+			d[0][i][j]=shifts[1][i][j]^shifts[2][i][j];
+			d[1][i][j]=shifts[1][i][j]&shifts[2][i][j];
+			c[0][i][j]=d[0][i][j]&shifts[3][i][j];
+			d[0][i][j]^=shifts[3][i][j];
+			d[2][i][j]=c[0][i][j]&d[1][i][j];
+			d[1][i][j]^=c[0][i][j];
+			for(int n=4;n<9;n++){
+				c[0][i][j]=d[0][i][j]&shifts[n][i][j];
+				d[0][i][j]^=shifts[n][i][j];
+				c[1][i][j]=d[1][i][j]&c[0][i][j];
+				d[1][i][j]^=c[0][i][j];
+				d[2][i][j]^=c[1][i][j];
+			}
+		}
 	}
-	return (c&(~d3)&d2) | (~d3&d2&d1);
+
+	for(int i=0;i<x;i++){
+		for(int j=0;j<y;j++){
+			// alive and _01_ (2 or 3) or dead and _010 (exactly 2)
+			new[i][j]=(old[i][j]&(~d[2][i][j])&d[1][i][j]) | (~d[2][i][j]&d[1][i][j]&d[0][i][j]);
+		}
+	}
+	return;
 }
 
-uint64_t glider = 0x0000000020107000;
-uint64_t spiner = 0x0000000070000000;
+uint64_t glider  = 0x0000000000020107;
+uint64_t glider2 = 0xc0a0800000000000;
+uint64_t spiner  = 0x0000000070000000;
+uint64_t edge    = 0x010101010101;
 
 int main(){
-		uint64_t grid [8][8];
-		for(int i=0;i<8;i++){
-			for(int j=0;j<8;j++){
+		uint64_t x,y;
+		x=4;
+		y=3;
+		uint64_t grid [x][y];
+		uint64_t newGrid[x][y];
+
+		for(int i=0;i<x;i++){
+			for(int j=0;j<y;j++){
 				grid[i][j]=0;
 			}
 		}
-		grid[2][4]=glider;
-}
+		grid[0][1]=glider;
 
+		showBigGrid(x,y,grid);
+		lineBreak(x);
+		for(int i=0;i<10000000;i++){
+			golStep(x,y,grid,newGrid);
+			golStep(x,y,newGrid,grid);
+		}
+		showBigGrid(x,y,grid);
+}
