@@ -15,6 +15,12 @@ void showByte(int8_t n){
 	}
 }
 
+void lineBreak(int x,char c){
+		for(int a=0;a<9*x-1;a++)
+			printf("%c",c);
+		printf("\n");
+}
+
 void showBigGrid(int x,int y,uint64_t grid[x][y]){
 	uint8_t * p;
 	for(int j=0;j<y;j++){
@@ -22,20 +28,12 @@ void showBigGrid(int x,int y,uint64_t grid[x][y]){
 			for(int i=x-1;i>=0;i--){
 				p= (uint8_t *)&grid[i][j];
 				showByte(*(p+row));
-				printf("|");
+				//printf("|");
 			}
 			printf("\n");
 		}
-		for(int a=0;a<9*x-1;a++)
-			printf("-");
-		printf("\n");
+		//lineBreak(x,'a');
 	}
-}
-
-void lineBreak(int x){
-		for(int a=0;a<9*x-1;a++)
-			printf("#");
-		printf("\n");
 }
 
 void showIntGrid(uint64_t  n){
@@ -47,7 +45,7 @@ void showIntGrid(uint64_t  n){
 }
 
 void showLong(uint64_t n){
-	for(int i=0;i<64;i++){
+	for(int i=0;i<64;i++){ // modified from same stackoverflow answer
 		if(n&1){
 			printf("1");
 		}else{
@@ -59,19 +57,19 @@ void showLong(uint64_t n){
 	printf("\n");
 }
 
-uint64_t downRow(uint64_t i,uint64_t u){
+inline uint64_t downRow(uint64_t i,uint64_t u){
 	return (i >> 8) | (u << 56);
 }
 
-uint64_t upRow(uint64_t i,uint64_t d){
+inline uint64_t upRow(uint64_t i,uint64_t d){
 	return (i << 8) | (d >> 56);
 }
 
-uint64_t leftCol(uint64_t i,uint64_t r){
+inline uint64_t leftCol(uint64_t i,uint64_t r){
 	return ( (i << 1) & 0xfefefefefefefefe ) | ( ((r >> 7) & 0x0101010101010101));
 }
 
-uint64_t rightCol(uint64_t i,uint64_t l){
+inline uint64_t rightCol(uint64_t i,uint64_t l){
 	return ( (i >> 1) & 0x7f7f7f7f7f7f7f7f ) | ( ((l << 7) & 0x8080808080808080));
 }
 
@@ -120,19 +118,12 @@ void golStep(int x,int y,uint64_t old[x][y],uint64_t new[x][y]){
 		gridUp  (x,y,shifts[i],shifts[i+3]); 
 		gridDown(x,y,shifts[i],shifts[i+6]); 
 	}
-	//debug
-	//for(int a=0;a<9;a++){
-	//	printf("%d\n",a);
-	//	showIntGrid(shifts[a][0][0]);
-	//	lineBreak(1);
-	//}
-	//debug
 	uint64_t d[3][x][y];
 	uint64_t c[2][x][y];
 
 	for(int i=0;i<x;i++){
 		for(int j=0;j<y;j++){
-			// first few are done outside a loop because they are slightly simpler when you know they started as 0
+			// first few are done outside a loop because they can be done more efficently when some vars are known to be 0
 			d[0][i][j]=shifts[1][i][j]^shifts[2][i][j];
 			d[1][i][j]=shifts[1][i][j]&shifts[2][i][j];
 			c[0][i][j]=d[0][i][j]&shifts[3][i][j];
@@ -178,7 +169,7 @@ int main(){
 		grid[0][1]=glider;
 
 		showBigGrid(x,y,grid);
-		lineBreak(x);
+		lineBreak(x,'#');
 		for(int i=0;i<10000000;i++){
 			golStep(x,y,grid,newGrid);
 			golStep(x,y,newGrid,grid);
