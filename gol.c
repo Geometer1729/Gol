@@ -110,18 +110,14 @@ void gridRight(int x,int y,uint64_t grid[x][y],uint64_t newGrid[x][y]){
 }
 
 void golStep(int x,int y,uint64_t old[x][y],uint64_t new[x][y]){
-	uint64_t shifts [9][x][y];
-	// I think there is a way to avoid coppying this but I'm not sure how
-	for(int i=0;i<x;i++){
-		for(int j=0;j<y;j++){
-			shifts[0][i][j]=old[i][j];
-		}
-	}
+	uint64_t shifts [8][x][y];
 	//left and right shifts are done first so they are done fewer times because I think they are a bit slower
-	gridLeft(x,y,shifts[0],shifts[1]);
-	gridRight(x,y,shifts[0],shifts[2]);
-	for(int i=0;i<3;i++){
-		gridUp  (x,y,shifts[i],shifts[i+3]); 
+	gridLeft (x,y,old,shifts[0]);
+	gridRight(x,y,old,shifts[1]);
+	gridUp   (x,y,old,shifts[2]);
+	gridDown (x,y,old,shifts[3]);
+	for(int i=0;i<2;i++){
+		gridUp  (x,y,shifts[i],shifts[i+4]); 
 		gridDown(x,y,shifts[i],shifts[i+6]); 
 	}
 	// d stores the bits of the count, c stores the carrys
@@ -132,13 +128,13 @@ void golStep(int x,int y,uint64_t old[x][y],uint64_t new[x][y]){
 	for(int i=0;i<x;i++){
 		for(int j=0;j<y;j++){
 			// first few are done outside a loop because they can be done more efficently when some vars are known to be 0
-			d[0][i][j]=shifts[1][i][j]^shifts[2][i][j];
-			d[1][i][j]=shifts[1][i][j]&shifts[2][i][j];
-			c[0][i][j]=d[0][i][j]&shifts[3][i][j];
-			d[0][i][j]^=shifts[3][i][j];
+			d[0][i][j]=shifts[0][i][j]^shifts[1][i][j];
+			d[1][i][j]=shifts[0][i][j]&shifts[1][i][j];
+			c[0][i][j]=d[0][i][j]&shifts[2][i][j];
+			d[0][i][j]^=shifts[2][i][j];
 			d[2][i][j]=c[0][i][j]&d[1][i][j];
 			d[1][i][j]^=c[0][i][j];
-			for(int n=4;n<9;n++){
+			for(int n=3;n<8;n++){
 				c[0][i][j]=d[0][i][j]&shifts[n][i][j];
 				d[0][i][j]^=shifts[n][i][j];
 				c[1][i][j]=d[1][i][j]&c[0][i][j];
@@ -156,6 +152,16 @@ void golStep(int x,int y,uint64_t old[x][y],uint64_t new[x][y]){
 	}
 	return;
 }
+
+void insert(int i,int j,int x,int y,uint64_t grid[x][y]){
+	int i2=i/8;
+	int i3=i%8;
+	int j2=j/8;
+	int j3=j%8;
+	int a=i3+j3*8;
+	grid[i][j] |= (1 << (63-a));
+}
+
 
 // atleast untill I add a way to read files these are handy for coding tests
 uint64_t glider  = 0x0000000000020107;
@@ -178,7 +184,7 @@ int main(){
 		grid[0][1]=glider;
 		showBigGrid(x,y,grid);
 		lineBreak(x,'#');
-		for(int i=0;i<100000000;i++){
+		for(int i=0;i<10000000;i++){
 			golStep(x,y,grid,newGrid);
 			golStep(x,y,newGrid,grid);
 		}
