@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 void showByte(int8_t n){
 	// Modified from https://stackoverflow.com/questions/1024389/print-an-int-in-binary-representation-using-c
@@ -154,14 +155,14 @@ void golStep(int x,int y,uint64_t old[x][y],uint64_t new[x][y]){
 }
 
 void insert(int i,int j,int x,int y,uint64_t grid[x][y]){
-	int i2=i/8;
-	int i3=i%8;
+	int i1=8*x-i-1;
+	int i2=i1/8;
+	int i3=i1%8;
 	int j2=j/8;
 	int j3=j%8;
-	int a=i3+j3*8;
-	grid[i][j] |= (1 << (63-a));
+	int a=j3*8+7-i3;
+	grid[i2][j2] |= ((uint64_t) 1 << a);
 }
-
 
 // atleast untill I add a way to read files these are handy for coding tests
 uint64_t glider  = 0x0000000000020107;
@@ -169,24 +170,53 @@ uint64_t glider2 = 0xc0a0800000000000;
 uint64_t spiner  = 0x0000000070000000;
 uint64_t edge    = 0x010101010101;
 
-int main(){
-		uint64_t x,y;
-		x=4;
-		y=3;
-		uint64_t grid [x][y];
-		uint64_t newGrid[x][y];
-
+int main(int argc,char* argv[]){
+		int steps;
+		if(argc>=2){
+			steps=atoi(argv[1]);
+		}else{
+			steps=100;
+		}
+		FILE *ifp;
+		ifp=fopen("./input","r");
+		int x,y;
+		fscanf(ifp, "%d", &x);
+		fscanf(ifp, "%d", &y);
+		printf("%d %d\n",x,y);
+		uint64_t grid[x][y];
+		char c;
+		int i,j;
 		for(int i=0;i<x;i++){
 			for(int j=0;j<y;j++){
 				grid[i][j]=0;
 			}
 		}
-		grid[0][1]=glider;
+		i=j=0;
+		while(fscanf(ifp,"%c",&c)!=EOF){
+			if(c==' '){
+				i++;
+			}else if(c == '@'){
+				insert(i,j,x,y,grid);
+				i++;
+			}else if(c == '\n'){
+				i=0;
+				j++;
+			}
+		}
+		fclose(ifp);
+		uint64_t newGrid[x][y];
+
 		showBigGrid(x,y,grid);
 		lineBreak(x,'#');
-		for(int i=0;i<10000000;i++){
+		for(int i=0;i<steps/2;i++){
 			golStep(x,y,grid,newGrid);
 			golStep(x,y,newGrid,grid);
 		}
-		showBigGrid(x,y,grid);
+
+		if(steps&1){
+			golStep(x,y,grid,newGrid);
+			showBigGrid(x,y,newGrid);
+		}else{
+			showBigGrid(x,y,grid);
+		}
 }
