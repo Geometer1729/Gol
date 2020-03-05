@@ -172,16 +172,26 @@ uint64_t edge    = 0x010101010101;
 
 int main(int argc,char* argv[]){
 		int steps;
-		if(argc>=2){
-			steps=atoi(argv[1]);
+		if(argc<2){
+			printf("please provide file name\n");
+		}
+		char* file=argv[1];
+		if(argc>=3){
+			steps=atoi(argv[2]);
 		}else{
 			steps=100;
 		}
 		FILE *ifp;
-		ifp=fopen("./input","r");
+		ifp=fopen(file,"r");
 		int x,y;
 		fscanf(ifp, "%d", &x);
 		fscanf(ifp, "%d", &y);
+		if ((x|y)&7){
+			printf("grid sizes which are not multiples of 8 are not supported\n");
+			exit(1);
+		}
+		x=x/8;
+		y=y/8;
 		printf("%d %d\n",x,y);
 		uint64_t grid[x][y];
 		char c;
