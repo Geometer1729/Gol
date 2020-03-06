@@ -205,6 +205,8 @@ int main(int argc,char* argv[]){
 		while(fscanf(ifp,"%c",&c)!=EOF){// read in the @s in the file
 			if(c==' '){
 				i++;
+			}else if(c == '\t'){
+				i+=2;
 			}else if(c == '@'){
 				insert(i,j,x,y,grid);
 				i++;
