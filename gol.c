@@ -147,8 +147,9 @@ void golStep(int x,int y,uint64_t old[x][y],uint64_t new[x][y]){
 
 	for(int i=0;i<x;i++){
 		for(int j=0;j<y;j++){
-			// alive and _01_ (2 or 3) or dead and _010 (exactly 2)
-			new[i][j]=(old[i][j]&(~d[2][i][j])&d[1][i][j]) | (~d[2][i][j]&d[1][i][j]&d[0][i][j]);
+			// _01_ (2 or 3) and alive or ___1 (odd)
+			uint64_t twoOrThree=~d[2][i][j] & d[1][i][j];
+			new[i][j]=twoOrThree & (old[i][j] | d[0][i][j]);
 		}
 	}
 	return;
@@ -171,38 +172,37 @@ uint64_t spiner  = 0x0000000070000000;
 uint64_t edge    = 0x010101010101;
 
 int main(int argc,char* argv[]){
-		int steps;
-		if(argc<2){
-			printf("please provide file name\n");
+		if(argc!=3){
+			printf("please provide a input file name and a number of steps\n");
+			exit(1);
 		}
 		char* file=argv[1];
-		if(argc>=3){
-			steps=atoi(argv[2]);
-		}else{
-			steps=100;
-		}
+		int steps=atoi(argv[2]);
 		FILE *ifp;
 		ifp=fopen(file,"r");
+		// read width and height from first two lines
 		int x,y;
 		fscanf(ifp, "%d", &x);
 		fscanf(ifp, "%d", &y);
-		if ((x|y)&7){
+
+		if ((x|y)&7){ // fun way to check if they are both 0 mod 8
 			printf("grid sizes which are not multiples of 8 are not supported\n");
 			exit(1);
 		}
+
 		x=x/8;
 		y=y/8;
-		printf("%d %d\n",x,y);
+
 		uint64_t grid[x][y];
-		char c;
-		int i,j;
 		for(int i=0;i<x;i++){
 			for(int j=0;j<y;j++){
 				grid[i][j]=0;
 			}
 		}
-		i=j=0;
-		while(fscanf(ifp,"%c",&c)!=EOF){
+
+		int i=0,j=0;
+		char c;
+		while(fscanf(ifp,"%c",&c)!=EOF){// read in the @s in the file
 			if(c==' '){
 				i++;
 			}else if(c == '@'){
@@ -214,10 +214,8 @@ int main(int argc,char* argv[]){
 			}
 		}
 		fclose(ifp);
-		uint64_t newGrid[x][y];
 
-		showBigGrid(x,y,grid);
-		lineBreak(x,'#');
+		uint64_t newGrid[x][y];
 		for(int i=0;i<steps/2;i++){
 			golStep(x,y,grid,newGrid);
 			golStep(x,y,newGrid,grid);
